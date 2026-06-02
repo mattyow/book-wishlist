@@ -16,15 +16,16 @@
   :root {
     --display: "Monarcha", Georgia, serif;
     --ui: "Mint Book", system-ui, sans-serif;
-    --paper: #f4efe4;
-    --paper-2: #ece5d6;
-    --ink: #2b2620;
-    --ink-soft: #6b6256;
-    --rule: #cbbfa8;
-    --accent: #8a3324;
-    --accent-soft: #b5573f;
-    --gold: #9a7b3f;
-    --shadow: rgba(43, 38, 32, 0.12);
+    --paper: #fdecf3;
+    --paper-2: #fbd9e6;
+    --field: #fef6fa;
+    --ink: #3a1530;
+    --ink-soft: #7a4763;
+    --rule: #f0bdd2;
+    --accent: #1763d6;
+    --accent-soft: #1455b8;
+    --gold: #bd2a6f;
+    --shadow: rgba(58, 21, 48, 0.12);
   }
   * { box-sizing: border-box; margin: 0; padding: 0; font-synthesis: none; }
   html, body { height: 100%; }
@@ -53,12 +54,13 @@
   .search { flex: 1; min-width: 180px; }
   input, select, textarea {
     font-family: var(--ui); font-size: 1rem; color: var(--ink);
-    background: var(--paper-2); border: 1px solid var(--rule); border-radius: 2px;
+    background: var(--field); border: 1px solid var(--rule); border-radius: 2px;
     padding: 0.5rem 0.7rem; width: 100%; outline: none;
   }
   input:focus, select:focus, textarea:focus { border-color: var(--accent); }
   select { cursor: pointer; }
   .toolbar select { width: auto; }
+  .toolbar #exportBtn { font-size: 1rem; }
 
   /* Add form */
   .add-card {
@@ -145,8 +147,8 @@
   .cover { width: 46px; height: 68px; object-fit: cover; background: var(--paper-2); border: 1px solid var(--rule); flex-shrink: 0; }
   .cover.blank { display: flex; align-items: center; justify-content: center; font-family: var(--display); color: var(--gold); font-size: 1.4rem; }
 
-  .gate { position: fixed; inset: 0; background: rgba(43,38,32,0.55); display: flex; align-items: center; justify-content: center; padding: 1.2rem; z-index: 50; }
-  .gate-card { background: var(--paper); border: 1px solid var(--rule); border-radius: 4px; padding: 1.6rem; max-width: 380px; width: 100%; box-shadow: 0 12px 40px rgba(43,38,32,0.3); }
+  .gate { position: fixed; inset: 0; background: rgba(58,21,48,0.5); display: flex; align-items: center; justify-content: center; padding: 1.2rem; z-index: 50; }
+  .gate-card { background: var(--paper); border: 1px solid var(--rule); border-radius: 4px; padding: 1.6rem; max-width: 380px; width: 100%; box-shadow: 0 12px 40px rgba(58,21,48,0.3); }
   .gate-title { font-family: var(--ui); font-weight: 500; font-size: 1.6rem; margin: 0.3rem 0 0.5rem; }
   .gate-msg { font-size: 0.92rem; color: var(--ink-soft); margin-bottom: 0.9rem; }
   .gate-msg.err { color: var(--accent); }

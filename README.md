@@ -85,7 +85,12 @@ netlify dev                   # serves the site + functions at localhost
   once the function is deployed. The whole list is stored as one JSON record under
   the key `books` in a store named `reading-list`.
 - **Covers & data** come from Open Library (openlibrary.org), a free public catalog.
-  No API key needed.
+  No API key needed. Google Books is used as an automatic fallback: if a search
+  returns nothing on Open Library, results come from Google Books instead, and when
+  you add a book Open Library has no ISBN for, Google is checked to fill it in. This
+  runs keyless (fine for personal volume); for higher/guaranteed quota you can paste
+  a referrer-restricted Google Books API key into the `GBKEY` constant near the
+  catalog-search code in `index.html`.
 - **Going multi-user later:** the public-read / owner-edit model here is the right
   default for that future — each person's list would be viewable by default, with
   only its owner able to edit. The data is already stored under a record key, so

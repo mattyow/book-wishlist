@@ -503,48 +503,114 @@
 
   function closeCat() { const r = $("catResults"); r.className = "cat-results"; r.innerHTML = ""; }
 
+  // Optional: paste a referrer-restricted Google Books API key here as "&key=YOUR_KEY"
+  // for higher, more reliable quota. Empty = keyless (fine for low personal volume).
+  const GBKEY = "";
+
+  // --- Normalize both sources to one shape: {title, author, year, isbn, cover, thumb, link} ---
+  function fromOpenLibrary(d) {
+    const id = d.cover_i;
+    return {
+      title: d.title,
+      author: (d.author_name && d.author_name[0]) || "",
+      year: d.first_publish_year || "",
+      isbn: pickIsbn(d.isbn),
+      cover: id ? `https://covers.openlibrary.org/b/id/${id}-M.jpg` : "",
+      thumb: id ? `https://covers.openlibrary.org/b/id/${id}-S.jpg` : "",
+      link: d.key ? "https://openlibrary.org" + d.key : ""
+    };
+  }
+  function fromGoogle(v) {
+    const info = v.volumeInfo || {};
+    const ids = info.industryIdentifiers || [];
+    const i13 = ids.find(x => x.type === "ISBN_13");
+    const i10 = ids.find(x => x.type === "ISBN_10");
+    let img = (info.imageLinks && (info.imageLinks.thumbnail || info.imageLinks.smallThumbnail)) || "";
+    img = img ? img.replace(/^http:/, "https:") : "";
+    return {
+      title: info.title || "",
+      author: (info.authors && info.authors[0]) || "",
+      year: (info.publishedDate || "").slice(0, 4),
+      isbn: (i13 && i13.identifier) || (i10 && i10.identifier) || "",
+      cover: img,
+      thumb: img,
+      link: info.infoLink || info.canonicalVolumeLink || ""
+    };
+  }
+
+  async function searchOpenLibrary(q) {
+    const url = "https://openlibrary.org/search.json?limit=6&fields=title,author_name,first_publish_year,cover_i,key,isbn&q=" + encodeURIComponent(q);
+    const res = await fetch(url);
+    const data = await res.json();
+    return (data.docs || []).filter(d => d.title).map(fromOpenLibrary);
+  }
+  async function searchGoogle(q) {
+    const url = "https://www.googleapis.com/books/v1/volumes?maxResults=6&printType=books&q=" + encodeURIComponent(q) + GBKEY;
+    const res = await fetch(url);
+    if (!res.ok) return [];
+    const data = await res.json();
+    return (data.items || []).map(fromGoogle).filter(b => b.title);
+  }
+  // Enrichment: find an ISBN for a title/author when the primary source lacks one.
+  async function isbnFromGoogle(title, author) {
+    try {
+      const t = title.replace(/"/g, "");
+      const a = (author || "").replace(/"/g, "");
+      let q = `intitle:"${t}"`;
+      if (a) q += ` inauthor:"${a}"`;
+      const url = "https://www.googleapis.com/books/v1/volumes?maxResults=3&printType=books&q=" + encodeURIComponent(q) + GBKEY;
+      const res = await fetch(url);
+      if (!res.ok) return "";
+      const data = await res.json();
+      for (const v of (data.items || [])) {
+        const b = fromGoogle(v);
+        if (b.isbn) return b.isbn;
+      }
+    } catch (e) {}
+    return "";
+  }
+
   async function runCat(q) {
     const seq = ++catSeq;
     const r = $("catResults");
     r.className = "cat-results open";
     r.innerHTML = `<div class="cat-note">Searching…</div>`;
     try {
-      const url = "https://openlibrary.org/search.json?limit=6&fields=title,author_name,first_publish_year,cover_i,key,isbn&q=" + encodeURIComponent(q);
-      const res = await fetch(url);
-      const data = await res.json();
+      let results = await searchOpenLibrary(q);
+      let note = "";
+      if (!results.length) {
+        results = await searchGoogle(q);            // fallback to Google for discovery
+        if (results.length) note = `<div class="cat-note">No Open Library matches — showing Google Books.</div>`;
+      }
       if (seq !== catSeq) return; // a newer search superseded this one
-      const docs = (data.docs || []).filter(d => d.title);
-      if (!docs.length) { r.innerHTML = `<div class="cat-note">No matches. You can still add it by hand.</div>`; return; }
-      r.innerHTML = docs.map((d, i) => {
-        const author = (d.author_name && d.author_name[0]) || "";
-        const yr = d.first_publish_year ? " · " + d.first_publish_year : "";
-        const cov = d.cover_i
-          ? `<img class="cat-cover" src="https://covers.openlibrary.org/b/id/${d.cover_i}-S.jpg" alt="">`
-          : `<div class="cat-cover blank">${esc((d.title[0]||'?').toUpperCase())}</div>`;
+      if (!results.length) { r.innerHTML = `<div class="cat-note">No matches. You can still add it by hand.</div>`; return; }
+      r.innerHTML = note + results.map((b, i) => {
+        const yr = b.year ? " · " + b.year : "";
+        const cov = b.thumb
+          ? `<img class="cat-cover" src="${esc(b.thumb)}" alt="">`
+          : `<div class="cat-cover blank">${esc((b.title[0]||'?').toUpperCase())}</div>`;
         return `<div class="cat-row" data-i="${i}">
           ${cov}
           <div class="cat-info">
-            <div class="cat-t">${esc(d.title)}</div>
-            <div class="cat-a">${esc(author)}${yr}</div>
+            <div class="cat-t">${esc(b.title)}</div>
+            <div class="cat-a">${esc(b.author)}${yr}</div>
           </div>
           <span class="cat-add">add</span>
         </div>`;
       }).join("");
-      r.querySelectorAll(".cat-row").forEach(el => el.onclick = () => pickCat(docs[+el.dataset.i]));
+      r.querySelectorAll(".cat-row").forEach(el => el.onclick = () => pickCat(results[+el.dataset.i]));
     } catch (e) {
       if (seq === catSeq) r.innerHTML = `<div class="cat-note">Search unavailable right now. Add by hand instead.</div>`;
     }
   }
 
-  async function pickCat(d) {
-    const isbn = pickIsbn(d.isbn);
-    addBook({
-      title: d.title,
-      author: (d.author_name && d.author_name[0]) || "",
-      isbn: isbn,
-      cover: d.cover_i ? `https://covers.openlibrary.org/b/id/${d.cover_i}-M.jpg` : "",
-      link: d.key ? "https://openlibrary.org" + d.key : ""
-    });
+  async function pickCat(b) {
+    let isbn = b.isbn;
+    if (!isbn) {                                    // fall back to Google for a missing ISBN
+      flash("Looking up ISBN…");
+      isbn = await isbnFromGoogle(b.title, b.author);
+    }
+    addBook({ title: b.title, author: b.author, isbn: isbn, cover: b.cover, link: b.link });
     $("catSearch").value = "";
     closeCat();
     render();

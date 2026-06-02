@@ -10,7 +10,8 @@ cover, ISBN) from the Open Library catalog.
 ```
 reading-list/
 ├── public/
-│   └── index.html          ← the whole frontend (fonts embedded)
+│   ├── index.html          ← the frontend (~29KB, easy to edit)
+│   └── fonts/              ← Monarcha + Mint web fonts (.woff2)
 ├── netlify/
 │   └── functions/
 │       └── list.mjs         ← reads/writes your list to Netlify Blobs
@@ -96,5 +97,6 @@ netlify dev                   # serves the site + functions at localhost
   only its owner able to edit. The data is already stored under a record key, so
   adding per-user accounts is an extension rather than a rebuild — though real
   accounts mean adding a login system, which is a meaningfully bigger project.
-- **Fonts** (Monarcha, Mint Book) are embedded directly in `index.html`. You confirmed
-  you hold the web licenses for both.
+- **Fonts** (Monarcha, Mint Book) live in `public/fonts/` and are linked with
+  relative paths in `index.html`. You confirmed you hold the web licenses for both.
+  They must stay at `public/fonts/` for the relative URLs to resolve.

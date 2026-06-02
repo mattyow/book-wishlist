@@ -173,6 +173,7 @@
     <div class="row-actions">
       <button class="toggle-import" id="toggleManual">add by hand instead</button>
       <button class="toggle-import" id="toggleImport">or paste a list</button>
+      <button class="toggle-import" id="findCovers">find missing covers</button>
     </div>
 
     <div class="manual-area" id="manualArea">
@@ -330,7 +331,9 @@
   function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
 
   function addBook(b) {
-    books.push({ id: uid(), added: Date.now(), priority: "want", ...b });
+    const book = { id: uid(), added: Date.now(), priority: "want", ...b };
+    books.push(book);
+    return book;
   }
 
   function priorityRank(p) { return p === "high" ? 0 : p === "want" ? 1 : 2; }
@@ -480,13 +483,63 @@
     const text = $("importText").value;
     const lines = text.split("\n").map(l => l.trim()).filter(Boolean);
     if (!lines.length) { flash("Nothing to import."); return; }
-    let n = 0;
-    lines.forEach(line => { const p = parseImportLine(line); if (p && p.title) { addBook(p); n++; } });
+    const parsed = lines.map(parseImportLine).filter(p => p && p.title);
+    if (!parsed.length) { flash("Nothing to import."); return; }
     $("importText").value = "";
     $("importArea").classList.remove("open");
+    const added = parsed.map(p => addBook(p));        // add immediately (title + author)
     render();
     await save();
-    flash(n + (n === 1 ? " book imported." : " books imported."));
+    flash(added.length + (added.length === 1 ? " book added." : " books added."));
+    await enrichBooks(added);                         // fetch covers + ISBNs in background
+    await save();
+  }
+
+  // Look up cover / ISBN / link for a title+author (Open Library, then Google)
+  async function lookupMeta(title, author) {
+    const q = (title + " " + (author || "")).trim();
+    try {
+      const hits = await searchOpenLibrary(q);
+      let hit = hits[0] || null;
+      if (!hit || (!hit.cover && !hit.isbn)) {
+        const g = await searchGoogle(q);
+        if (g[0]) {
+          if (!hit) hit = g[0];
+          else { hit.cover = hit.cover || g[0].cover; hit.isbn = hit.isbn || g[0].isbn; hit.link = hit.link || g[0].link; }
+        }
+      }
+      return hit;
+    } catch (e) { return null; }
+  }
+
+  // Enrich books missing a cover or ISBN, a few at a time, with live progress
+  async function enrichBooks(list) {
+    const todo = list.filter(b => !b.cover || !b.isbn);
+    if (!todo.length) { setSync("All linked", "ok"); return; }
+    let done = 0;
+    const BATCH = 4;
+    for (let i = 0; i < todo.length; i += BATCH) {
+      await Promise.all(todo.slice(i, i + BATCH).map(async b => {
+        const hit = await lookupMeta(b.title, b.author);
+        if (hit) {
+          if (!b.cover && hit.cover) b.cover = hit.cover;
+          if (!b.isbn && hit.isbn) b.isbn = hit.isbn;
+          if (!b.link && hit.link) b.link = hit.link;
+        }
+        done++;
+        setSync(`Finding covers… ${done}/${todo.length}`);
+      }));
+      render();                                        // covers pop in as they resolve
+    }
+    setSync("Covers & ISBNs added", "ok");
+  }
+
+  // Backfill the whole current list (e.g. books pasted earlier without metadata)
+  async function enrichAll() {
+    if (!canEdit) return;
+    if (!books.some(b => !b.cover || !b.isbn)) { flash("Everything already has a cover & ISBN."); return; }
+    await enrichBooks(books);
+    await save();
   }
 
   // ---------- Catalog search (Open Library) ----------
@@ -653,6 +706,7 @@
   $("importBtn").onclick = onImport;
   $("toggleImport").onclick = () => { $("importArea").classList.toggle("open"); $("manualArea").classList.remove("open"); };
   $("toggleManual").onclick = () => { $("manualArea").classList.toggle("open"); $("importArea").classList.remove("open"); };
+  $("findCovers").onclick = enrichAll;
   $("searchBox").oninput = render;
   $("sortBy").onchange = render;
   $("exportBtn").onclick = exportCsv;

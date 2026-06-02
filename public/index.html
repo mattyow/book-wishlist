@@ -3,7 +3,6 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
 <title>To Buy and Be Read</title>
 <style>
   @font-face { font-family: "Monarcha"; font-style: normal; font-weight: 400; font-display: swap;
@@ -63,9 +62,7 @@
 
   /* Add form */
   .add-card {
-    background: var(--paper-2); border: 1px solid var(--rule);
-    border-radius: 3px; padding: 1rem; margin-bottom: 1.6rem;
-    box-shadow: 0 1px 2px var(--shadow);
+    margin-bottom: 1.6rem;
   }
   .add-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; }
   .add-grid .full { grid-column: 1 / -1; }
@@ -176,8 +173,8 @@
     <input id="catSearch" class="full cat-input" placeholder="Search a title or author to add…" autocomplete="off">
     <div id="catResults" class="cat-results"></div>
     <div class="row-actions">
-      <button class="toggle-import" id="toggleManual">add by hand instead →</button>
-      <button class="toggle-import" id="toggleImport">or paste a list →</button>
+      <button class="toggle-import" id="toggleManual">add by hand instead</button>
+      <button class="toggle-import" id="toggleImport">or paste a list</button>
     </div>
 
     <div class="manual-area" id="manualArea">
@@ -391,10 +388,11 @@
           <div class="title">${esc(b.title)}</div>
           ${b.author ? `<div class="author">${esc(b.author)}</div>` : ""}
           ${b.note ? `<div class="note">${esc(b.note)}</div>` : ""}
-          <div class="badges">
-            <span class="pill ${pcls}">${priorityLabel(b.priority)}</span>
-            ${link ? `<a class="ext" href="${esc(link)}" target="_blank" rel="noopener">view link ↗</a>` : ""}
-          </div>
+          ${(() => {
+            const pill = (b.priority && b.priority !== "want") ? `<span class="pill ${pcls}">${priorityLabel(b.priority)}</span>` : "";
+            const ext = link ? `<a class="ext" href="${esc(link)}" target="_blank" rel="noopener">view link</a>` : "";
+            return (pill || ext) ? `<div class="badges">${pill}${ext}</div>` : "";
+          })()}
         </div>
         ${canEdit ? `<div class="acts">
           <button class="icon-btn" data-edit="${b.id}">edit</button>
@@ -529,7 +527,7 @@
             <div class="cat-t">${esc(d.title)}</div>
             <div class="cat-a">${esc(author)}${yr}</div>
           </div>
-          <span class="cat-add">add +</span>
+          <span class="cat-add">add</span>
         </div>`;
       }).join("");
       r.querySelectorAll(".cat-row").forEach(el => el.onclick = () => pickCat(docs[+el.dataset.i]));

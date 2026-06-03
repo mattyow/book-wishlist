@@ -140,8 +140,13 @@
   .manual-area { display: none; margin-top: 0.7rem; }
   .manual-area.open { display: block; }
 
-  .cover { width: 46px; height: 68px; object-fit: cover; background: var(--paper-2); border: 1px solid var(--rule); flex-shrink: 0; }
-  .cover.blank { display: flex; align-items: center; justify-content: center; font-family: var(--display); color: var(--gold); font-size: 1.4rem; }
+  .cover { width: 56px; height: 84px; object-fit: cover; background: var(--paper-2); border: 1px solid var(--rule); flex-shrink: 0; }
+  .cover.blank { display: flex; align-items: center; justify-content: center; font-family: var(--display); color: var(--gold); font-size: 1.7rem; }
+  .pager { display: flex; align-items: center; justify-content: center; gap: 1.1rem; margin-top: 1.6rem; }
+  .pg-btn { font-family: var(--ui); font-weight: 500; font-size: 0.85rem; background: transparent; color: var(--ink); border: 1px solid var(--rule); border-radius: 2px; padding: 0.4rem 0.95rem; cursor: pointer; }
+  .pg-btn:hover:not(:disabled) { background: var(--field); }
+  .pg-btn:disabled { opacity: 0.4; cursor: default; transform: none; }
+  .pg-info { font-family: var(--ui); font-size: 0.85rem; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
 
   .gate { position: fixed; inset: 0; background: rgba(58,21,48,0.5); display: flex; align-items: center; justify-content: center; padding: 1.2rem; z-index: 50; }
   .gate-card { background: var(--paper); border: 1px solid var(--rule); border-radius: 4px; padding: 1.6rem; max-width: 380px; width: 100%; box-shadow: 0 12px 40px rgba(58,21,48,0.3); }
@@ -231,6 +236,7 @@
   </div>
 
   <ul class="list" id="list"></ul>
+  <div class="pager" id="pager"></div>
 </div>
 
 <script>
@@ -360,30 +366,43 @@
     return url;
   }
 
+  let page = 0;
+  const PAGE_SIZE = 24;
+
   function render() {
     const arr = currentSorted();
     const total = books.length;
     $("count").textContent = total === 0 ? "Nothing here yet" : total + (total === 1 ? " book" : " books") + " waiting";
 
     const list = $("list");
+    const pager = $("pager");
     if (total === 0) {
       list.innerHTML = canEdit
         ? `<div class="empty"><div class="big">An empty shelf.</div>Search a title above to add your first book, or paste a whole list at once.</div>`
         : `<div class="empty"><div class="big">An empty shelf.</div>Nothing here yet.</div>`;
+      pager.innerHTML = "";
       return;
     }
     if (arr.length === 0) {
       list.innerHTML = `<div class="empty"><div class="big">No matches.</div>Try a different search.</div>`;
+      pager.innerHTML = "";
       return;
     }
-    list.innerHTML = arr.map((b, i) => {
+
+    const pages = Math.max(1, Math.ceil(arr.length / PAGE_SIZE));
+    if (page > pages - 1) page = pages - 1;
+    if (page < 0) page = 0;
+    const start = page * PAGE_SIZE;
+    const slice = arr.slice(start, start + PAGE_SIZE);
+
+    list.innerHTML = slice.map((b, i) => {
       const link = safeLink(b.link);
       const pcls = b.priority === "high" ? "high" : b.priority === "someday" ? "someday" : "";
       const cover = b.cover
         ? `<img class="cover" src="${esc(b.cover)}" alt="" loading="lazy" onerror="this.outerHTML='<div class=\\'cover blank\\'>${esc((b.title[0]||'?').toUpperCase())}</div>'">`
         : `<div class="cover blank">${esc((b.title[0]||'?').toUpperCase())}</div>`;
       return `<li class="book" style="animation-delay:${Math.min(i*22,300)}ms">
-        <div class="num">${String(i+1).padStart(2,'0')}</div>
+        <div class="num">${String(start + i + 1).padStart(2,'0')}</div>
         ${cover}
         <div class="book-body">
           <div class="title">${esc(b.title)}</div>
@@ -405,6 +424,17 @@
     if (canEdit) {
       list.querySelectorAll("[data-del]").forEach(el => el.onclick = () => removeBook(el.dataset.del));
       list.querySelectorAll("[data-edit]").forEach(el => el.onclick = () => startEdit(el.dataset.edit));
+    }
+
+    if (pages > 1) {
+      pager.innerHTML =
+        `<button class="pg-btn" id="pgPrev"${page === 0 ? " disabled" : ""}>Prev</button>` +
+        `<span class="pg-info">${start + 1}–${start + slice.length} of ${arr.length}</span>` +
+        `<button class="pg-btn" id="pgNext"${page >= pages - 1 ? " disabled" : ""}>Next</button>`;
+      $("pgPrev").onclick = () => { if (page > 0) { page--; render(); window.scrollTo({ top: 0, behavior: "smooth" }); } };
+      $("pgNext").onclick = () => { if (page < pages - 1) { page++; render(); window.scrollTo({ top: 0, behavior: "smooth" }); } };
+    } else {
+      pager.innerHTML = "";
     }
   }
 
@@ -707,8 +737,8 @@
   $("toggleImport").onclick = () => { $("importArea").classList.toggle("open"); $("manualArea").classList.remove("open"); };
   $("toggleManual").onclick = () => { $("manualArea").classList.toggle("open"); $("importArea").classList.remove("open"); };
   $("findCovers").onclick = enrichAll;
-  $("searchBox").oninput = render;
-  $("sortBy").onchange = render;
+  $("searchBox").oninput = () => { page = 0; render(); };
+  $("sortBy").onchange = () => { page = 0; render(); };
   $("exportBtn").onclick = exportCsv;
   $("fTitle").addEventListener("keydown", e => { if (e.key === "Enter") onAdd(); });
   $("fAuthor").addEventListener("keydown", e => { if (e.key === "Enter") onAdd(); });

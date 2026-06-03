@@ -458,8 +458,23 @@
     };
     if (editingId) {
       const b = books.find(x => x.id === editingId);
-      if (b) Object.assign(b, data);
+      let refresh = false;
+      if (b) {
+        // If the title or author changed, the old cover is likely stale — drop it
+        // and re-fetch. ISBN is only re-fetched if you cleared that field.
+        refresh = (b.title !== data.title) || ((b.author || "") !== data.author);
+        Object.assign(b, data);
+        if (refresh) b.cover = "";
+      }
       endEdit();
+      clearForm();
+      if (refresh && b) {
+        flash("Updated — refreshing cover…");
+        render();
+        await enrichBooks([b]);
+        await save();
+        return;
+      }
       flash("Updated.");
     } else {
       addBook(data);

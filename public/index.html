@@ -24,12 +24,14 @@
     --shadow: rgba(58, 21, 48, 0.12);
   }
   * { box-sizing: border-box; margin: 0; padding: 0; font-synthesis: none; }
-  html, body { height: 100%; }
+  html, body { min-height: 100%; }
   body {
     background: var(--paper);
     background-image:
-      radial-gradient(circle at 20% 10%, rgba(154,123,63,0.05), transparent 40%),
-      radial-gradient(circle at 85% 90%, rgba(138,51,36,0.04), transparent 45%);
+      radial-gradient(1100px circle at 12% 6%, rgba(189,42,111,0.18), transparent 55%),
+      radial-gradient(1100px circle at 88% 94%, rgba(23,99,214,0.15), transparent 55%);
+    background-attachment: fixed;
+    background-repeat: no-repeat;
     color: var(--ink);
     font-family: var(--ui);
     font-size: 17px;
@@ -140,9 +142,9 @@
   .manual-area { display: none; margin-top: 0.7rem; }
   .manual-area.open { display: block; }
 
-  .cover { width: 56px; height: 84px; object-fit: cover; background: var(--paper-2); border: 1px solid var(--rule); flex-shrink: 0; }
-  .cover.blank { display: flex; align-items: center; justify-content: center; font-family: var(--display); color: var(--gold); font-size: 1.7rem; }
-  .pager { display: flex; align-items: center; justify-content: center; gap: 1.1rem; margin-top: 1.6rem; }
+  .cover { width: 112px; height: 168px; object-fit: cover; background: var(--paper-2); border: 1px solid var(--rule); flex-shrink: 0; }
+  .cover.blank { display: flex; align-items: center; justify-content: center; font-family: var(--display); color: var(--gold); font-size: 3.2rem; }
+  .pager { display: flex; align-items: center; justify-content: center; gap: 1.1rem; margin: 1.6rem 0 2.5rem; }
   .pg-btn { font-family: var(--ui); font-weight: 500; font-size: 0.85rem; background: transparent; color: var(--ink); border: 1px solid var(--rule); border-radius: 2px; padding: 0.4rem 0.95rem; cursor: pointer; }
   .pg-btn:hover:not(:disabled) { background: var(--field); }
   .pg-btn:disabled { opacity: 0.4; cursor: default; transform: none; }
